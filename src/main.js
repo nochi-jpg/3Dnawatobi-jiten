@@ -36,8 +36,23 @@ function ik(a, c, l1, l2, pole) {
 }
 
 /* ===== 1周の中の位置 ph(0〜1) から全身の姿勢を計算 ===== */
-function pose(ph) {
-  ph = ((ph % 1) + 1) % 1;
+/* 技の定義：cross(n) は n回旋目の時点の「腕の交差ぐあい」0〜1 */
+const smooth = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+const parity = k => ((k % 2) + 2) % 2;
+function ayaCross(n) { // 偶数回旋=ひらく、奇数回旋=こうさ。縄が後ろ〜頭上にある間に組みかえる
+  const k = Math.floor(n), ph = n - k;
+  if (ph >= 0.94) return parity(k) + (parity(k + 1) - parity(k)) * smooth((ph - 0.94) / 0.26);
+  if (ph < 0.20) return parity(k - 1) + (parity(k) - parity(k - 1)) * smooth((ph + 0.06) / 0.26);
+  return parity(k);
+}
+const TECHS = {
+  mae: { cycles: 1, cross: () => 0 },
+  aya: { cycles: 2, cross: ayaCross },
+};
+let tech = 'mae';
+function pose(n) {
+  const w = TECHS[tech].cross(n);
+  let ph = ((n % 1) + 1) % 1;
   const th = 2 * Math.PI * ph; // 縄の角度 0=頭上, π/2=前, π=足の下
   let hipY, pf, legScale = 1, air = false, dip = 0;
   if (ph >= AIR0 && ph < AIR1) {
@@ -55,7 +70,7 @@ function pose(ph) {
   const lean = 0.07 + 0.05 * dip;
   const hipC = new THREE.Vector3(0, hipY, 0);
   const pelvis = hipC.clone().add(new THREE.Vector3(0, 0.05, 0));
-  const o = { ph, th, air, pf, lean, pelvis, sides: {} };
+  const o = { ph, th, air, pf, lean, pelvis, w, sides: {} };
   o.neck = pelvis.clone().add(rotX(new THREE.Vector3(0, 0.50, 0), lean));
   o.head = pelvis.clone().add(rotX(new THREE.Vector3(0, 0.66, 0.01), lean * 0.6));
   const thH = th + Math.PI * 0.45; // 手首の円は縄より少し先に動く
@@ -66,15 +81,17 @@ function pose(ph) {
       ? s.hip.clone().add(TAKE_DIR.clone().multiplyScalar(L_TAKE * legScale))
       : ankleOnGround(sx, pf);
     s.knee = ik(s.hip, s.ankle, THIGH, SHIN, new THREE.Vector3(sx * 0.08, 0, 1));
-    s.shoulder = pelvis.clone().add(rotX(new THREE.Vector3(sx * 0.19, 0.45, 0), lean));
+    s.shoulder = pelvis.clone().add(rotX(new THREE.Vector3(sx * (0.19 - 0.04 * w), 0.45, 0.06 * w), lean));
     const circle = new THREE.Vector3(0, 0.04 * Math.cos(thH), 0.04 * Math.sin(thH));
-    s.wrist = pelvis.clone().add(rotX(new THREE.Vector3(sx * 0.36, -0.02, 0.10), lean * 0.3)).add(circle);
-    s.elbow = ik(s.shoulder, s.wrist, UPPER, FORE, new THREE.Vector3(-sx * 0.8, 0, -0.6));
+    const wOpen = new THREE.Vector3(sx * 0.36, -0.02, 0.10);
+    const wCross = new THREE.Vector3(-sx * 0.21, 0.08 + 0.03 * sx, 0.22 + 0.075 * sx); // 右手側(sx=1)が前で上
+    s.wrist = pelvis.clone().add(rotX(wOpen.lerp(wCross, w).add(new THREE.Vector3(0, 0.03 * sx, 0.07 * sx).multiplyScalar(Math.sin(Math.PI * w))), lean * 0.3)).add(circle);
+    s.elbow = ik(s.shoulder, s.wrist, UPPER, FORE, new THREE.Vector3(-sx * 0.8, 0, -0.6).lerp(new THREE.Vector3(sx * 0.2, -0.5, -0.8), w).normalize());
     const fdir = s.wrist.clone().sub(s.elbow).normalize();
     s.fist = s.wrist.clone().add(fdir.multiplyScalar(0.045));
     // グリップ：手首の返しで先が縄の方向へかたむく
     // グリップは前・やや内向きでほぼ水平に持ち、先が手首の返しで小さく円をかく
-    s.gripDir = new THREE.Vector3(sx * 0.75, -0.1, 0.65)
+    s.gripDir = new THREE.Vector3(sx * 0.75 * (1 - 2 * w), -0.1, 0.65)
       .add(new THREE.Vector3(0, 0.22 * Math.cos(th), 0.22 * Math.sin(th))).normalize();
     s.tip = s.fist.clone().add(s.gripDir.clone().multiplyScalar(0.12));
     o.sides[sx] = s;
@@ -89,9 +106,10 @@ function pose(ph) {
     const f = Math.pow(Math.sin(Math.PI * s), 0.55);
     const a = th - 0.25 * f; // 縄の真ん中は少し遅れてついてくる
     const base = tL.clone().lerp(tR, s);
-    const orbit = new THREE.Vector3(base.x, C.y + (1.00 - 0.06 * Math.cos(a)) * Math.cos(a), 0.03 + 0.60 * Math.sin(a));
+    const orbit = new THREE.Vector3(base.x, C.y - 0.15 * w + (1.00 - 0.06 * Math.cos(a)) * Math.cos(a), 0.03 + 0.60 * Math.sin(a));
     const p = base.lerp(orbit, f);
-    p.x += 0.12 * Math.sin(2 * Math.PI * s);
+    p.x += Math.max(-1, Math.min(1, (tL.x - tR.x) / 0.25)) * (0.12 + 0.22 * w) * Math.sin(2 * Math.PI * s);
+    p.z += 0.22 * Math.sin(Math.PI * w) * Math.sin(Math.PI * s); // 組みかえ中は縄が体の前へふくらむ
     if (p.y < 0.009) p.y = 0.009;
     o.rope.push(p);
   }
@@ -170,7 +188,7 @@ let ropeMesh = null;
 /* 見るポイント：関節の強調と軌跡 */
 const POINTS = {
   none: { label: 'なし', key: null, tip: 'ドラッグで回転、ホイールやピンチで拡大できます。' },
-  wrist: { label: '手首', key: 'wrist', tip: 'ひじはわきにつけ、手は腰の横に広げる。手首で小さな円をかいて回す。' },
+  wrist: { label: '手首', key: 'wrist', tip: 'ひじはわきにつけ、手首で小さな円をかいて回す。あやとびは手をおへその前で深く交差。' },
   knee: { label: 'ひざ', key: 'knee', tip: 'ひざは軽く曲げてクッションに。深く曲げすぎない。' },
   ankle: { label: '足首', key: 'ankle', tip: 'つま先（母指球）でとぶ。かかとは地面につけない。' },
 };
@@ -185,7 +203,8 @@ function buildTrails() {
     trails[i].visible = hiMarks[i].visible = !!key;
     if (!key) return;
     const pts = [];
-    for (let k = 0; k <= 120; k++) pts.push(pose(k / 120).sides[sx][key]);
+    const cyc = TECHS[tech].cycles;
+    for (let k = 0; k <= 120 * cyc; k++) pts.push(pose(k / 120).sides[sx][key]);
     trails[i].geometry.dispose();
     trails[i].geometry = new THREE.BufferGeometry().setFromPoints(pts);
   });
@@ -235,6 +254,7 @@ function group(sel, fn) {
 }
 group('[data-g=view]', v => { camGoal = new THREE.Vector3(...VIEWS[v]); });
 group('[data-g=speed]', v => { speed = +v; });
+group('[data-g=tech]', v => { tech = v; simT = 0; lastPh = -1; buildTrails(); });
 group('[data-g=point]', v => { point = v; tipEl.textContent = POINTS[v].tip; buildTrails(); });
 const playBtn = document.getElementById('play');
 playBtn.addEventListener('click', () => { playing = !playing; playBtn.textContent = playing ? '停止' : '再生'; });
@@ -254,13 +274,14 @@ let last = performance.now(), lastPh = -1;
 function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (playing) simT += dt * speed;
-  const ph = (simT / CYCLE) % 1;
-  if (ph !== lastPh) {
-    apply(pose(ph)); lastPh = ph;
+  const n = (simT / CYCLE) % TECHS[tech].cycles, ph = n % 1;
+  if (n !== lastPh) {
+    const o = pose(n); apply(o); lastPh = n;
     marker.style.left = ph * 100 + '%';
     const p = PHASES.find(p => ph >= p.a && ph < p.b) || PHASES[0];
     if (phName.textContent !== p.name) phName.textContent = p.name;
-    if (phDesc.textContent !== p.desc) phDesc.textContent = p.desc;
+    const d = tech === 'aya' ? (Math.round(o.w) ? 'こうさの回：' : 'ひらきの回：') + p.desc : p.desc;
+    if (phDesc.textContent !== d) phDesc.textContent = d;
   }
   if (camGoal) {
     camera.position.lerp(camGoal, 0.12);
@@ -272,4 +293,5 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 window.__pose = pose;
+window.__tech = v => { tech = v; lastPh = -1; };
 window.__set = v => { simT = v * CYCLE; playing = false; playBtn.textContent = '再生'; };

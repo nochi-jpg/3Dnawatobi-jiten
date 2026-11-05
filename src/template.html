@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>たんなわ技じてん 試作 前とび</title>
+<title>たんなわ技じてん 試作版</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden;font-family:"BIZ UDPGothic","Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;background:#eef2f5;color:#23303c}
@@ -11,6 +11,9 @@ html,body{height:100%;overflow:hidden;font-family:"BIZ UDPGothic","Hiragino Kaku
 #head{flex:0 0 40px;display:flex;align-items:center;gap:10px;padding:0 12px;background:#24508c;color:#fff}
 #head h1{font-size:16px;font-weight:700;white-space:nowrap}
 #head span{font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#techs{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 10px;background:#fff;border-bottom:1px solid #cfd6dd}
+#techs button{height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.2;font-size:15px}
+#techs small{font-size:11px;font-weight:400}
 #main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 #view{flex:1 1 auto;min-height:0;min-width:0;position:relative}
 #view canvas{display:block;touch-action:none}
@@ -46,7 +49,11 @@ button:active{transform:translateY(1px)}
 </head>
 <body>
 <div id="app">
-  <div id="head"><h1>たんなわ技じてん</h1><span>試作：前とび（1回旋1跳躍）</span></div>
+  <div id="head"><h1>たんなわ技じてん</h1><span>試作版</span></div>
+  <div id="techs">
+    <button data-g="tech" data-v="mae" class="on">まえとび<small>1かいせん1ちょうやく</small></button>
+    <button data-g="tech" data-v="aya">あやとび<small>ひらく・こうさをくりかえす</small></button>
+  </div>
   <div id="main">
   <div id="view"></div>
   <div id="panel"><div id="inner">
