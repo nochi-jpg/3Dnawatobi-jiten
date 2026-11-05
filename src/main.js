@@ -68,13 +68,13 @@ function pose(ph) {
     s.knee = ik(s.hip, s.ankle, THIGH, SHIN, new THREE.Vector3(sx * 0.08, 0, 1));
     s.shoulder = pelvis.clone().add(rotX(new THREE.Vector3(sx * 0.19, 0.45, 0), lean));
     const circle = new THREE.Vector3(0, 0.04 * Math.cos(thH), 0.04 * Math.sin(thH));
-    s.wrist = pelvis.clone().add(rotX(new THREE.Vector3(sx * 0.25, 0.08, 0.15), lean * 0.3)).add(circle);
-    s.elbow = ik(s.shoulder, s.wrist, UPPER, FORE, new THREE.Vector3(sx * 0.3, -0.4, -0.5));
+    s.wrist = pelvis.clone().add(rotX(new THREE.Vector3(sx * 0.36, -0.02, 0.10), lean * 0.3)).add(circle);
+    s.elbow = ik(s.shoulder, s.wrist, UPPER, FORE, new THREE.Vector3(-sx * 0.8, 0, -0.6));
     const fdir = s.wrist.clone().sub(s.elbow).normalize();
     s.fist = s.wrist.clone().add(fdir.multiplyScalar(0.045));
     // グリップ：手首の返しで先が縄の方向へかたむく
     // グリップは前・やや内向きでほぼ水平に持ち、先が手首の返しで小さく円をかく
-    s.gripDir = new THREE.Vector3(-sx * 0.35, -0.12, 1)
+    s.gripDir = new THREE.Vector3(sx * 0.75, -0.1, 0.65)
       .add(new THREE.Vector3(0, 0.22 * Math.cos(th), 0.22 * Math.sin(th))).normalize();
     s.tip = s.fist.clone().add(s.gripDir.clone().multiplyScalar(0.12));
     o.sides[sx] = s;
@@ -89,7 +89,7 @@ function pose(ph) {
     const f = Math.pow(Math.sin(Math.PI * s), 0.55);
     const a = th - 0.25 * f; // 縄の真ん中は少し遅れてついてくる
     const base = tL.clone().lerp(tR, s);
-    const orbit = new THREE.Vector3(base.x, C.y + (1.0 - 0.15 * Math.cos(a)) * Math.cos(a), 0.03 + 0.60 * Math.sin(a));
+    const orbit = new THREE.Vector3(base.x, C.y + (1.00 - 0.06 * Math.cos(a)) * Math.cos(a), 0.03 + 0.60 * Math.sin(a));
     const p = base.lerp(orbit, f);
     p.x += 0.12 * Math.sin(2 * Math.PI * s);
     if (p.y < 0.009) p.y = 0.009;
@@ -170,7 +170,7 @@ let ropeMesh = null;
 /* 見るポイント：関節の強調と軌跡 */
 const POINTS = {
   none: { label: 'なし', key: null, tip: 'ドラッグで回転、ホイールやピンチで拡大できます。' },
-  wrist: { label: '手首', key: 'wrist', tip: 'ひじは体の横。腕ではなく手首で小さな円をかいて回す。' },
+  wrist: { label: '手首', key: 'wrist', tip: 'ひじはわきにつけ、手は腰の横に広げる。手首で小さな円をかいて回す。' },
   knee: { label: 'ひざ', key: 'knee', tip: 'ひざは軽く曲げてクッションに。深く曲げすぎない。' },
   ankle: { label: '足首', key: 'ankle', tip: 'つま先（母指球）でとぶ。かかとは地面につけない。' },
 };
