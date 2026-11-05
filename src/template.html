@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>たんなわ技じてん 試作 前とび</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:"BIZ UDPGothic","Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;background:#eef2f5;color:#23303c}
+#app{display:flex;flex-direction:column;height:100%}
+#head{flex:0 0 40px;display:flex;align-items:center;gap:10px;padding:0 12px;background:#24508c;color:#fff}
+#head h1{font-size:16px;font-weight:700;white-space:nowrap}
+#head span{font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#view{flex:1 1 auto;min-height:0;position:relative}
+#view canvas{display:block;touch-action:none}
+#panel{flex:0 0 auto;background:#fff;border-top:1px solid #cfd6dd;padding:8px 10px 10px}
+#inner{max-width:720px;margin:0 auto}
+#phase{display:grid;grid-template-columns:96px 1fr;align-items:center;height:44px;gap:8px}
+#phName{height:32px;line-height:32px;text-align:center;font-weight:700;font-size:15px;background:#24508c;color:#fff;border-radius:6px}
+#phDesc{font-size:13px;line-height:1.35;max-height:36px;overflow:hidden}
+#bar{position:relative;height:10px;border-radius:5px;overflow:hidden;margin:2px 0 6px}
+#bar div{position:absolute;top:0;height:100%}
+#bar i{position:absolute;top:0;width:3px;height:100%;background:#23303c;margin-left:-1px}
+#tip{height:20px;line-height:20px;font-size:12px;color:#5a6672;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
+.row{display:grid;grid-template-columns:48px repeat(6,1fr);gap:5px;margin-top:5px}
+.row b{height:38px;line-height:38px;font-size:12px;color:#5a6672;font-weight:700}
+button{height:38px;min-width:0;border:1px solid #b9c3cd;background:#f5f7f9;border-radius:6px;font:inherit;font-size:13px;font-weight:700;color:#23303c;cursor:pointer;white-space:nowrap;overflow:hidden}
+button.on{background:#24508c;border-color:#24508c;color:#fff}
+button:active{transform:translateY(1px)}
+@media (max-width:420px){
+  #head span{display:none}
+  #phase{grid-template-columns:80px 1fr}
+  .row{grid-template-columns:40px repeat(6,1fr);gap:4px}
+  button{font-size:12px}
+  .row b{font-size:11px}
+  #phDesc{font-size:12px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="head"><h1>たんなわ技じてん</h1><span>試作：前とび（1回旋1跳躍）</span></div>
+  <div id="view"></div>
+  <div id="panel"><div id="inner">
+    <div id="phase"><div id="phName">しずみこみ</div><div id="phDesc"></div></div>
+    <div id="bar"></div>
+    <div id="tip">ドラッグで回転、ホイールやピンチで拡大できます。</div>
+    <div class="row"><b>視点</b>
+      <button data-g="view" data-v="front" class="on">正面</button>
+      <button data-g="view" data-v="side">横</button>
+      <button data-g="view" data-v="back">後ろ</button>
+      <button data-g="view" data-v="diag">ななめ</button>
+    </div>
+    <div class="row"><b>速さ</b>
+      <button data-g="speed" data-v="1" class="on">等速</button>
+      <button data-g="speed" data-v="0.5">1/2</button>
+      <button data-g="speed" data-v="0.25">1/4</button>
+      <button data-g="speed" data-v="0.1">1/10</button>
+      <button id="play">停止</button>
+      <button id="step">1コマ</button>
+    </div>
+    <div class="row"><b>見る</b>
+      <button data-g="point" data-v="none" class="on">なし</button>
+      <button data-g="point" data-v="wrist">手首</button>
+      <button data-g="point" data-v="knee">ひざ</button>
+      <button data-g="point" data-v="ankle">足首</button>
+    </div>
+  </div></div>
+</div>
+<script>/*BUNDLE*/</script>
+</body>
+</html>
