@@ -168,7 +168,7 @@ function ball(r, mat) {
 }
 const parts = {
   torso: seg(0.12, matBody, 1.3, 0.85), neck: seg(0.04, matBody),
-  head: ball(0.105, matBody), pelvis: ball(0.13, matBody), chest: ball(0.14, matBody),
+  head: ball(0.105, matBody),
   shoulders: seg(0.05, matBody), hips: seg(0.06, matBody),
 };
 const nose = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.05, 10), matJoint);
@@ -211,8 +211,7 @@ function buildTrails() {
 }
 
 function apply(o) {
-  parts.torso(o.pelvis, o.neck); parts.pelvis(o.pelvis);
-  parts.chest(o.pelvis.clone().lerp(o.neck, 0.72));
+  parts.torso(o.pelvis, o.neck);
   parts.neck(o.neck, o.head); parts.head(o.head);
   nose.position.copy(o.head).add(new THREE.Vector3(0, 0, 0.11));
   parts.shoulders(o.sides[1].shoulder, o.sides[-1].shoulder);
@@ -254,7 +253,7 @@ function group(sel, fn) {
 }
 group('[data-g=view]', v => { camGoal = new THREE.Vector3(...VIEWS[v]); });
 group('[data-g=speed]', v => { speed = +v; });
-group('[data-g=tech]', v => { tech = v; simT = 0; lastPh = -1; buildTrails(); });
+group('[data-g=tech]', v => { tech = v; simT = 0; prevT = 0; lastPh = -1; buildTrails(); });
 group('[data-g=point]', v => { point = v; tipEl.textContent = POINTS[v].tip; buildTrails(); });
 const playBtn = document.getElementById('play');
 playBtn.addEventListener('click', () => { playing = !playing; playBtn.textContent = playing ? '停止' : '再生'; });
@@ -270,10 +269,30 @@ function resize() {
 }
 new ResizeObserver(resize).observe(view); resize();
 
-let last = performance.now(), lastPh = -1;
+/* 着地の効果音（足が地面についた瞬間に鳴らす） */
+let actx = null, seBuf = null;
+function initAudio() {
+  if (actx) { if (actx.state === 'suspended') actx.resume(); return; }
+  try {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    const bin = atob('__SE_LAND__'), arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    actx.decodeAudioData(arr.buffer, b => { seBuf = b; }, () => {});
+  } catch (e) { actx = null; }
+}
+window.addEventListener('pointerdown', initAudio);
+window.addEventListener('keydown', initAudio);
+function playLand() {
+  if (!actx || !seBuf || actx.state !== 'running') return;
+  const src = actx.createBufferSource(); src.buffer = seBuf; src.connect(actx.destination); src.start();
+}
+
+let last = performance.now(), lastPh = -1, prevT = 0;
 function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (playing) simT += dt * speed;
+  if (Math.floor(simT / CYCLE - AIR1) > Math.floor(prevT / CYCLE - AIR1)) playLand();
+  prevT = simT;
   const n = (simT / CYCLE) % TECHS[tech].cycles, ph = n % 1;
   if (n !== lastPh) {
     const o = pose(n); apply(o); lastPh = n;
@@ -294,4 +313,4 @@ function loop(now) {
 requestAnimationFrame(loop);
 window.__pose = pose;
 window.__tech = v => { tech = v; lastPh = -1; };
-window.__set = v => { simT = v * CYCLE; playing = false; playBtn.textContent = '再生'; };
+window.__set = v => { simT = prevT = v * CYCLE; playing = false; playBtn.textContent = '再生'; };
