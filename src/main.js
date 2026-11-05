@@ -67,12 +67,18 @@ function pose(n) {
     hipY = H0 - DIP * dip;
     pf = PF_MIN + (PF_MAX - PF_MIN) * (Math.cos(2 * Math.PI * v) + 1) / 2;
   }
-  const lean = 0.07 + 0.05 * dip;
+  const lean = 0.07 + 0.05 * dip + 0.09 * w; // あやとびの交差時は上体を少し前へ
+  const chestA = lean + 0.18 * w;            // 交差時は胸を丸める（肩が前へ出る）
   const hipC = new THREE.Vector3(0, hipY, 0);
   const pelvis = hipC.clone().add(new THREE.Vector3(0, 0.05, 0));
-  const o = { ph, th, air, pf, lean, pelvis, w, sides: {} };
-  o.neck = pelvis.clone().add(rotX(new THREE.Vector3(0, 0.50, 0), lean));
-  o.head = pelvis.clone().add(rotX(new THREE.Vector3(0, 0.66, 0.01), lean * 0.6));
+  const o = { ph, th, air, pf, lean, chestA, pelvis, w, sides: {} };
+  const waist = pelvis.clone().add(rotX(new THREE.Vector3(0, 0.20, 0), lean));
+  o.waist = waist;
+  o.chestC = waist.clone().add(rotX(new THREE.Vector3(0, 0.12, -0.015), chestA));
+  o.bellyC = pelvis.clone().add(rotX(new THREE.Vector3(0, 0.08, 0.005), lean));
+  o.notch = waist.clone().add(rotX(new THREE.Vector3(0, 0.27, 0.05), chestA));
+  o.neck = waist.clone().add(rotX(new THREE.Vector3(0, 0.31, 0), chestA));
+  o.head = o.neck.clone().add(rotX(new THREE.Vector3(0, 0.15, 0.015), lean * 0.6 + 0.35 * w)); // 交差時は手元を見る
   const thH = th + Math.PI * 0.45; // 手首の円は縄より少し先に動く
   for (const sx of [1, -1]) {
     const s = {};
@@ -81,12 +87,12 @@ function pose(n) {
       ? s.hip.clone().add(TAKE_DIR.clone().multiplyScalar(L_TAKE * legScale))
       : ankleOnGround(sx, pf);
     s.knee = ik(s.hip, s.ankle, THIGH, SHIN, new THREE.Vector3(sx * 0.08, 0, 1));
-    s.shoulder = pelvis.clone().add(rotX(new THREE.Vector3(sx * (0.19 - 0.04 * w), 0.45, 0.06 * w), lean));
+    s.shoulder = waist.clone().add(rotX(new THREE.Vector3(sx * (0.19 - 0.02 * w), 0.26, 0.07 * w), chestA));
     const circle = new THREE.Vector3(0, 0.04 * Math.cos(thH), 0.04 * Math.sin(thH));
     const wOpen = new THREE.Vector3(sx * 0.36, -0.02, 0.10);
-    const wCross = new THREE.Vector3(-sx * 0.21, 0.08 + 0.03 * sx, 0.22 + 0.075 * sx); // 右手側(sx=1)が前で上
-    s.wrist = pelvis.clone().add(rotX(wOpen.lerp(wCross, w).add(new THREE.Vector3(0, 0.03 * sx, 0.07 * sx).multiplyScalar(Math.sin(Math.PI * w))), lean * 0.3)).add(circle);
-    s.elbow = ik(s.shoulder, s.wrist, UPPER, FORE, new THREE.Vector3(-sx * 0.8, 0, -0.6).lerp(new THREE.Vector3(sx * 0.2, -0.5, -0.8), w).normalize());
+    const wCross = new THREE.Vector3(-sx * 0.17, 0.02 + 0.03 * sx, 0.30 + 0.07 * sx); // 右手側(sx=1)が前で上
+    s.wrist = pelvis.clone().add(rotX(wOpen.lerp(wCross, w).add(new THREE.Vector3(0, 0.03 * sx, 0.12 + 0.05 * sx).multiplyScalar(Math.sin(Math.PI * w))), lean * 0.3)).add(circle);
+    s.elbow = ik(s.shoulder, s.wrist, UPPER, FORE, new THREE.Vector3(-sx * 0.8, 0, -0.6).lerp(new THREE.Vector3(sx * 0.6, -0.3, 0.3), w).normalize());
     const fdir = s.wrist.clone().sub(s.elbow).normalize();
     s.fist = s.wrist.clone().add(fdir.multiplyScalar(0.045));
     // グリップ：手首の返しで先が縄の方向へかたむく
@@ -167,10 +173,14 @@ function ball(r, mat) {
   return p => m.position.copy(p);
 }
 const parts = {
-  torso: seg(0.12, matBody, 1.3, 0.85), neck: seg(0.04, matBody),
+  neck: seg(0.04, matBody),
   head: ball(0.105, matBody),
-  shoulders: seg(0.05, matBody), hips: seg(0.06, matBody),
+  hips: seg(0.06, matBody),
 };
+/* 胴：胸郭と腹を楕円体で表す（筒だと肩・腕が貫通するため） */
+const CHEST_R = new THREE.Vector3(0.13, 0.18, 0.09), BELLY_R = new THREE.Vector3(0.125, 0.14, 0.085);
+function ellip(r) { const m = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 20), matBody); m.scale.copy(r); m.castShadow = true; scene.add(m); return m; }
+const chestMesh = ellip(CHEST_R), bellyMesh = ellip(BELLY_R);
 const nose = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.05, 10), matJoint);
 nose.rotation.x = Math.PI / 2; scene.add(nose);
 const side = {};
@@ -178,7 +188,7 @@ for (const sx of [1, -1]) {
   const footGeo = new THREE.BoxGeometry(0.09, 0.06, 0.24); footGeo.translate(0, -0.03, 0.06);
   const foot = new THREE.Mesh(footGeo, matShoe); foot.castShadow = true; scene.add(foot);
   side[sx] = {
-    upper: seg(0.042, matBody), fore: seg(0.034, matBody), thigh: seg(0.062, matBody), shin: seg(0.046, matBody),
+    clav: seg(0.026, matBody), upper: seg(0.042, matBody), fore: seg(0.034, matBody), thigh: seg(0.062, matBody), shin: seg(0.046, matBody),
     grip: seg(0.016, matGrip), sh: ball(0.05, matJoint), el: ball(0.038, matJoint), wr: ball(0.03, matJoint),
     fist: ball(0.045, matBody), hip: ball(0.064, matJoint), kn: ball(0.052, matJoint), an: ball(0.04, matJoint), foot,
   };
@@ -211,10 +221,11 @@ function buildTrails() {
 }
 
 function apply(o) {
-  parts.torso(o.pelvis, o.neck);
+  chestMesh.position.copy(o.chestC); chestMesh.rotation.x = o.chestA;
+  bellyMesh.position.copy(o.bellyC); bellyMesh.rotation.x = o.lean;
   parts.neck(o.neck, o.head); parts.head(o.head);
   nose.position.copy(o.head).add(new THREE.Vector3(0, 0, 0.11));
-  parts.shoulders(o.sides[1].shoulder, o.sides[-1].shoulder);
+  for (const sx of [1, -1]) side[sx].clav(o.notch, o.sides[sx].shoulder);
   parts.hips(o.sides[1].hip, o.sides[-1].hip);
   for (const sx of [1, -1]) {
     const s = o.sides[sx], m = side[sx];
@@ -312,5 +323,6 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 window.__pose = pose;
+window.__ell = { CHEST_R, BELLY_R };
 window.__tech = v => { tech = v; lastPh = -1; };
 window.__set = v => { simT = prevT = v * CYCLE; playing = false; playBtn.textContent = '再生'; };
