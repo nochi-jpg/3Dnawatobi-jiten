@@ -11,7 +11,8 @@ html,body{height:100%;overflow:hidden;font-family:"BIZ UDPGothic","Hiragino Kaku
 #head{flex:0 0 40px;display:flex;align-items:center;gap:10px;padding:0 12px;background:#24508c;color:#fff}
 #head h1{font-size:16px;font-weight:700;white-space:nowrap}
 #head span{font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#view{flex:1 1 auto;min-height:0;position:relative}
+#main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+#view{flex:1 1 auto;min-height:0;min-width:0;position:relative}
 #view canvas{display:block;touch-action:none}
 #panel{flex:0 0 auto;background:#fff;border-top:1px solid #cfd6dd;padding:8px 10px 10px}
 #inner{max-width:720px;margin:0 auto}
@@ -21,12 +22,18 @@ html,body{height:100%;overflow:hidden;font-family:"BIZ UDPGothic","Hiragino Kaku
 #bar{position:relative;height:10px;border-radius:5px;overflow:hidden;margin:2px 0 6px}
 #bar div{position:absolute;top:0;height:100%}
 #bar i{position:absolute;top:0;width:3px;height:100%;background:#23303c;margin-left:-1px}
-#tip{height:20px;line-height:20px;font-size:12px;color:#5a6672;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
+#tip{height:34px;line-height:17px;font-size:12px;color:#5a6672;overflow:hidden;margin-bottom:4px}
 .row{display:grid;grid-template-columns:48px repeat(6,1fr);gap:5px;margin-top:5px}
 .row b{height:38px;line-height:38px;font-size:12px;color:#5a6672;font-weight:700}
 button{height:38px;min-width:0;border:1px solid #b9c3cd;background:#f5f7f9;border-radius:6px;font:inherit;font-size:13px;font-weight:700;color:#23303c;cursor:pointer;white-space:nowrap;overflow:hidden}
 button.on{background:#24508c;border-color:#24508c;color:#fff}
 button:active{transform:translateY(1px)}
+/* 横向き（PC・タブレット横）：3Dを左、操作パネルを右に */
+@media (orientation:landscape) and (min-width:640px){
+  #main{flex-direction:row}
+  #panel{flex:0 0 380px;border-top:none;border-left:1px solid #cfd6dd;display:flex;align-items:center;padding:10px 12px}
+  #inner{width:100%}
+}
 @media (max-width:420px){
   #head span{display:none}
   #phase{grid-template-columns:80px 1fr}
@@ -40,6 +47,7 @@ button:active{transform:translateY(1px)}
 <body>
 <div id="app">
   <div id="head"><h1>たんなわ技じてん</h1><span>試作：前とび（1回旋1跳躍）</span></div>
+  <div id="main">
   <div id="view"></div>
   <div id="panel"><div id="inner">
     <div id="phase"><div id="phName">しずみこみ</div><div id="phDesc"></div></div>
@@ -66,6 +74,7 @@ button:active{transform:translateY(1px)}
       <button data-g="point" data-v="ankle">足首</button>
     </div>
   </div></div>
+  </div>
 </div>
 <script>/*BUNDLE*/</script>
 </body>
